@@ -20,9 +20,11 @@ La implementación se realiza con microcontroladores ESP32 para simular un entor
 
 ## Arquitectura del Sistema
 
+<pre>
 EMISOR ESP32  ─── WiFi TCP ───>  RECEPTOR ESP32  
 Cifrado                          Descifrado  
-Generación de claves            Validación de mensajes  
+Generación de claves             Validación de mensajes  
+</pre>
 
 <p align="center">
   <img src="Asset/image.jpeg" width="500"/>
@@ -80,7 +82,7 @@ const int port = 1234;
 
 ---
 
-## 🧪 Comandos del Emisor
+## Comandos del Emisor
 
 /fcm   → Iniciar sesión  
 /kum   → Actualizar clave  
@@ -112,7 +114,7 @@ texto  → Enviar mensaje cifrado
 
 ---
 
-## 📡 Ejemplo de salida
+## Ejemplo de salida
 
 EMISOR:
 Conectado al servidor
