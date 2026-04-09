@@ -121,6 +121,7 @@ Conectado al servidor
 
 RECEPTOR:
 Cliente conectado
+
 Mensaje: Hola mundo
 
 ---
