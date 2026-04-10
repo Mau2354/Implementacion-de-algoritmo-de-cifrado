@@ -107,7 +107,7 @@ void encrypt(char* msg, uint8_t length) {
     case 3: op4(msg, currentKey, length); break;
   }
 
-  // PSN basado en el mensaje (como el paper)
+  // PSN basado en el mensaje 
   PSN = (msg[length - 1] ^ (currentKey & 0xFF)) & 0x0F;
 }
 
@@ -198,7 +198,7 @@ void loop() {
       sendMessage(3, "END");
     }
 
-    // ===== OTROS COMANDOS (NO ENVIAR) =====
+    // ===== OTROS COMANDOS =====
     else if (input.startsWith("/")) {
       Serial.println("Comando desconocido");
     }
