@@ -23,7 +23,7 @@ La implementación se realiza con microcontroladores ESP32 para simular un entor
 <pre>
 EMISOR ESP32  ─── WiFi TCP ───>  RECEPTOR ESP32  
 Cifrado                          Descifrado  
-Generación de claves             Validación de mensajes  
+Generación de llaves 
 </pre>
 
 <p align="center">
