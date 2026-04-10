@@ -1,5 +1,3 @@
-//Receptor
-
 #include <WiFi.h>
 
 const char* ssid = "TIGO-1F62";
@@ -14,8 +12,13 @@ uint32_t P = 61;
 uint32_t Q = 53;
 uint32_t S = 12345;
 
+
 uint8_t PSN = 0;
 uint64_t currentKey;
+
+uint64_t keyTable[10];
+int keyCount = 0;
+
 WiFiClient activeClient;
 
 // ===== MENSAJE =====
@@ -23,7 +26,7 @@ struct Message {
   uint8_t nodeID;
   uint8_t type;
   uint8_t psn;
-  uint64_t key;
+  uint32_t newSeed;
   uint8_t length;
   char payload[100];
 };
@@ -41,6 +44,15 @@ uint32_t fm(uint32_t S, uint32_t Q) {
   return (S ^ Q) + (S << 1);
 }
 
+void generateKey() {
+  uint64_t P0 = fs(P, S);
+  currentKey = fg(P0, Q);
+  S = fm(S, Q);
+
+  // guardar en tabla circular
+  keyTable[keyCount % 10] = currentKey;
+  keyCount++;
+}
 
 // ===== DESCIFRADO =====
 void op1(char* msg, uint64_t key, uint8_t length) {
@@ -62,47 +74,45 @@ void op3(char* msg, uint8_t length) {
 }
 
 void op4(char* msg, uint64_t key, uint8_t length) {
-  for (int i = 0; i < length; i++) {
-    msg[i] = msg[i] - ((key >> ((i + 3) % 8)) & 0x0F);
-  }
+  for (int i = 0; i < length; i++)
+    msg[i] -= ((key >> ((i + 3) % 8)) & 0x0F);
 }
 
 void decrypt(char* msg, uint8_t length) {
 
+  generateKey();
+
+  // calcular PSN ANTES de modificar el mensaje
+  uint8_t newPSN = (msg[length - 1] ^ (currentKey & 0xFF)) & 0x0F;
+
   switch (PSN % 4) {
-
-    case 0:
-      op2(msg, length);
-      op1(msg, currentKey, length);
-      break;
-
-    case 1:
-      op3(msg, length);
-      op2(msg, length);
-      break;
-
-    case 2:
-      op1(msg, currentKey, length);
-      op3(msg, length);
-      break;
-
-    case 3:
-      op4(msg, currentKey, length);
-      break;
+    case 0: op2(msg, length); op1(msg, currentKey, length); break;
+    case 1: op3(msg, length); op2(msg, length); break;
+    case 2: op1(msg, currentKey, length); op3(msg, length); break;
+    case 3: op4(msg, currentKey, length); break;
   }
+
+  PSN = newPSN;
 }
 
+// ===== RESET =====
+void resetSession() {
+  PSN = 0;
+  currentKey = 0;
+
+  // limpiar tabla
+  for (int i = 0; i < 10; i++) keyTable[i] = 0;
+  keyCount = 0;
+}
 
 // ===== PROCESAR =====
 void processMessage(Message msg) {
-
-  PSN = msg.psn;
-  currentKey = msg.key; 
 
   switch (msg.type) {
 
     case 0:
       Serial.println("FCM recibido");
+      resetSession();
       break;
 
     case 1:
@@ -114,16 +124,14 @@ void processMessage(Message msg) {
 
     case 2:
       Serial.println("KUM recibido");
+      S = msg.newSeed;
+      resetSession();
       break;
 
     case 3:
       Serial.println("LCM recibido");
-      if (activeClient){
-        activeClient.stop();
-      }
-      PSN = 0;
-      currentKey = 0;
-
+      resetSession();
+      activeClient.stop();
       break;
   }
 }
@@ -138,24 +146,17 @@ void setup() {
   server.begin();
 
   Serial.println("RECEPTOR listo");
-  Serial.print("IP: ");
   Serial.println(WiFi.localIP());
 }
 
 // ===== LOOP =====
-
 void loop() {
 
-  // esperar cliente
   if (!activeClient.connected()) {
     activeClient = server.available();
-
-    if (activeClient) {
-      Serial.println("Cliente conectado");
-    }
+    if (activeClient) Serial.println("Cliente conectado");
   }
 
-  // procesar mensajes
   if (activeClient.connected()) {
 
     while (activeClient.available() >= sizeof(Message)) {
