@@ -107,7 +107,7 @@ void encrypt(char* msg, uint8_t length) {
     case 3: op4(msg, currentKey, length); break;
   }
 
-  // PSN basado en el mensaje 
+  // ===== PSN BASADO EN MENSAJE ===== 
   PSN = (msg[length - 1] ^ (currentKey & 0xFF)) & 0x0F;
 }
 
@@ -116,7 +116,7 @@ void resetSession() {
   PSN = 0;
   currentKey = 0;
 
-  // limpiar tabla
+  // ===== LIMPIAR TABLA =====
   for (int i = 0; i < 10; i++) keyTable[i] = 0;
   keyCount = 0;
 }
@@ -137,23 +137,45 @@ void sendMessage(uint8_t type, String text) {
   msg.type = type;
   msg.psn = PSN;
   msg.length = text.length();
-  
 
   memset(msg.payload, 0, sizeof(msg.payload));
   memcpy(msg.payload, text.c_str(), msg.length);
 
-  if (type == 1) encrypt(msg.payload, msg.length);
+  // ===== SOLO PARA MENSAJES RM =====
+  if (type == 1) {
 
+    Serial.print("Mensaje original (texto): ");
+    Serial.println(text);
+
+    Serial.println("Payload original (HEX):");
+    for (int i = 0; i < msg.length; i++) {
+      Serial.printf("%02X ", (uint8_t)msg.payload[i]);
+    }
+    Serial.println();
+
+    Serial.printf("PSN usado: %d\n", PSN);
+    encrypt(msg.payload, msg.length);
+
+    Serial.printf("Clave usada: 0x%016llX\n", currentKey);
+    Serial.println("Payload cifrado (HEX):");
+    for (int i = 0; i < msg.length; i++) {
+      Serial.printf("%02X ", (uint8_t)msg.payload[i]);
+    }
+    Serial.println();
+  }
+
+  // ===== ENVIAR =====
   client.write((uint8_t*)&msg, sizeof(msg));
 
+  Serial.println("Mensaje enviado\n");
+
+  // ===== CONTROL =====
   if (type == 0) {
-    sessionActive = true;
     resetSession();
   }
 
   if (type == 3) {
     client.stop();
-    sessionActive = false;
     resetSession();
   }
 }
